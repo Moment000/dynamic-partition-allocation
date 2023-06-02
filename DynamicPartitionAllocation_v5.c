@@ -22,8 +22,14 @@ int main() {
     int memory_size, choice, process_size;
     int exit_flag = 0;
 
-    printf("请输入内存大小：");
-    scanf("%d", &memory_size);
+    while (1) {
+        printf("请输入内存大小：");
+        if (scanf("%d", &memory_size) == 1 && memory_size > 0) {
+            break;
+        }
+        printf("无效的内存大小，请重新输入\n");
+        while (getchar() != '\n') continue; // 清空输入缓冲区
+    }
 
     initializeMemory(memory_size);
 
