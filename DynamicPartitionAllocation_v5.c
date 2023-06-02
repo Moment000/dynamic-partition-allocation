@@ -1,148 +1,249 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <limits.h>
-#include <locale.h>
 
-typedef struct {
-    int start;
-    int size;
-    int allocated;
+// 定义内存块结构体
+typedef struct MemoryBlock {
+    int start_address;  // 起始地址
+    int size;           // 大小
+    int is_allocated;   // 是否已分配
+    struct MemoryBlock* next;  // 下一个内存块的指针
 } MemoryBlock;
 
-MemoryBlock* memoryBlocks;
-int numBlocks;
+// 全局变量，表示内存链表的头节点
+MemoryBlock* memory = NULL;
 
-void initializeMemory(int size) {
-    numBlocks = 1;
-    memoryBlocks = (MemoryBlock*)malloc(sizeof(MemoryBlock));
-    memoryBlocks[0].start = 0;
-    memoryBlocks[0].size = size;
-    memoryBlocks[0].allocated = 0;
-}
-
-void firstFitAllocation(int size) {
-    int i;
-    for (i = 0; i < numBlocks; i++) {
-        if (!memoryBlocks[i].allocated && memoryBlocks[i].size >= size) {
-            memoryBlocks[i].allocated = 1;
-            memoryBlocks[i].size -= size;
-            memoryBlocks[numBlocks].start = memoryBlocks[i].start + size;
-            memoryBlocks[numBlocks].size = memoryBlocks[i].size;
-            memoryBlocks[numBlocks].allocated = 0;
-            numBlocks++;
-            printf("成功：分配了 %d 字节的内存块。\n", size);
-            return;
-        }
-    }
-    printf("错误：没有可用的内存块进行分配。\n");
-}
-
-void bestFitAllocation(int size) {
-    MemoryBlock* bestBlock = NULL;
-    int smallestSize = INT_MAX;
-    int i;
-
-    for (i = 0; i < numBlocks; i++) {
-        if (!memoryBlocks[i].allocated && memoryBlocks[i].size >= size &&
-            memoryBlocks[i].size < smallestSize) {
-            smallestSize = memoryBlocks[i].size;
-            bestBlock = &memoryBlocks[i];
-        }
-    }
-
-    if (bestBlock != NULL) {
-        bestBlock->allocated = 1;
-        bestBlock->size -= size;
-        memoryBlocks[numBlocks].start = bestBlock->start + size;
-        memoryBlocks[numBlocks].size = bestBlock->size;
-        memoryBlocks[numBlocks].allocated = 0;
-        numBlocks++;
-        printf("成功：分配了 %d 字节的内存块。\n", size);
-    } else {
-        printf("错误：没有可用的内存块进行分配。\n");
-    }
-}
-
-void deallocateMemoryBlock(int startAddress) {
-    int i;
-    for (i = 0; i < numBlocks; i++) {
-        if (memoryBlocks[i].start == startAddress && memoryBlocks[i].allocated) {
-            memoryBlocks[i].allocated = 0;
-            printf("成功：回收了起始地址为 %d 的内存块。\n", startAddress);
-            return;
-        }
-    }
-    printf("错误：未找到或未分配起始地址为 %d 的内存块。\n", startAddress);
-}
-
-void printMemoryStatus() {
-    int i;
-    printf("当前内存状态：\n");
-    printf("-----------------------\n");
-    for (i = 0; i < numBlocks; i++) {
-        printf("块 %d：起始地址=%d, 大小=%d, 分配状态=%s\n",
-               i + 1, memoryBlocks[i].start, memoryBlocks[i].size,
-               memoryBlocks[i].allocated ? "已分配" : "未分配");
-    }
-    printf("-----------------------\n");
-}
+// 函数声明
+void initializeMemory(int size);
+void allocateMemory(int process_size, int algorithm);
+void deallocateMemory(int process_size);
+void printMemoryStatus();
 
 int main() {
+    int memory_size, choice, process_size;
+    int exit_flag = 0;
 
-    setlocale(LC_ALL, "");  // 设置输出编码为终端默认编码
+    printf("请输入内存大小：");
+    scanf("%d", &memory_size);
 
+    initializeMemory(memory_size);
 
-    int size;
-    int option;
-    int blockSize;
-
-    printf("请输入内存大小（字节）：");
-    scanf("%d", &size);
-
-    initializeMemory(size);
-
-    while (1) {
-        printf("\n");
-        printf("1. 分配内存块（首次适应）\n");
-        printf("2. 分配内存块（最佳适应）\n");
-        printf("3. 回收内存块\n");
-        printf("4. 打印内存状态\n");
-        printf("5. 退出\n");
+    while (!exit_flag) {
+        printf("\n1. 分配内存\n2. 释放内存\n3. 显示内存状态\n4. 退出\n");
         printf("请选择操作：");
-        scanf("%d", &option);
+        scanf("%d", &choice);
 
-        switch (option) {
+        switch (choice) {
             case 1:
-                printf("请输入要分配的内存块大小（字节）：");
-                scanf("%d", &blockSize);
-                firstFitAllocation(blockSize);
-                // printMemoryStatus();
+                printf("请输入进程大小：");
+                scanf("%d", &process_size);
+                printf("请选择分配算法（1.首次适应 2.最佳适应 3.最坏适应）：");
+                scanf("%d", &choice);
+                allocateMemory(process_size, choice);
                 break;
             case 2:
-                printf("请输入要分配的内存块大小（字节）：");
-                scanf("%d", &blockSize);
-                bestFitAllocation(blockSize);
-                // printMemoryStatus();
+                printf("请输入要释放的进程大小：");
+                scanf("%d", &process_size);
+                deallocateMemory(process_size);
                 break;
             case 3:
-                printf("请输入要回收的内存块起始地址：");
-                scanf("%d", &blockSize);
-                deallocateMemoryBlock(blockSize);
-                // printMemoryStatus();
-                break;
-            case 4:
                 printMemoryStatus();
                 break;
-            case 5:
-                free(memoryBlocks);
-                printf("程序已退出。\n");
-                exit(0);
+            case 4:
+                exit_flag = 1;
                 break;
             default:
-                printf("错误：无效的选项。\n");
-                break;
+                printf("无效的选择\n");
         }
     }
 
     return 0;
+}
+
+// 初始化内存
+void initializeMemory(int size) {
+    memory = (MemoryBlock*)malloc(sizeof(MemoryBlock));
+    memory->start_address = 0;
+    memory->size = size;
+    memory->is_allocated = 0;
+    memory->next = NULL;
+}
+
+// 首次适应算法分配内存
+void firstFit(int process_size) {
+    MemoryBlock* current = memory;
+    while (current != NULL) {
+        if (!current->is_allocated && current->size >= process_size) {
+            // 找到一个未分配且大小足够的内存块
+            if (current->size == process_size) {
+                current->is_allocated = 1;
+                printf("分配成功，起始地址：%d\n", current->start_address);
+                return;
+            } else {
+                MemoryBlock* new_block = (MemoryBlock*)malloc(sizeof(MemoryBlock));
+                new_block->start_address = current->start_address;
+                new_block->size = process_size;
+                new_block->is_allocated = 1;
+                new_block->next = current->next;
+
+                current->size -= process_size;
+                current->start_address += process_size;
+                current->next = new_block;
+
+                printf("分配成功，起始地址：%d\n", new_block->start_address);
+                return;
+            }
+        }
+        current = current->next;
+    }
+    printf("无足够的内存空间可供分配\n");
+}
+
+// 最佳适应算法分配内存
+void bestFit(int process_size) {
+    MemoryBlock* current = memory;
+    MemoryBlock* best_block = NULL;
+    int best_fit = -1;
+
+    while (current != NULL) {
+        if (!current->is_allocated && current->size >= process_size) {
+            // 找到一个未分配且大小足够的内存块
+            if (best_block == NULL || current->size < best_fit) {
+                best_block = current;
+                best_fit = current->size;
+            }
+        }
+        current = current->next;
+    }
+
+    if (best_block != NULL) {
+        if (best_block->size == process_size) {
+            best_block->is_allocated = 1;
+            printf("分配成功，起始地址：%d\n", best_block->start_address);
+        } else {
+            MemoryBlock* new_block = (MemoryBlock*)malloc(sizeof(MemoryBlock));
+            new_block->start_address = best_block->start_address;
+            new_block->size = process_size;
+            new_block->is_allocated = 1;
+            new_block->next = best_block->next;
+
+            best_block->size -= process_size;
+            best_block->start_address += process_size;
+            best_block->next = new_block;
+
+            printf("分配成功，起始地址：%d\n", new_block->start_address);
+        }
+    } else {
+        printf("无足够的内存空间可供分配\n");
+    }
+}
+
+// 最坏适应算法分配内存
+void worstFit(int process_size) {
+    MemoryBlock* current = memory;
+    MemoryBlock* worst_block = NULL;
+    int worst_fit = -1;
+
+    while (current != NULL) {
+        if (!current->is_allocated && current->size >= process_size) {
+            // 找到一个未分配且大小足够的内存块
+            if (worst_block == NULL || current->size > worst_fit) {
+                worst_block = current;
+                worst_fit = current->size;
+            }
+        }
+        current = current->next;
+    }
+
+    if (worst_block != NULL) {
+        if (worst_block->size == process_size) {
+            worst_block->is_allocated = 1;
+            printf("分配成功，起始地址：%d\n", worst_block->start_address);
+        } else {
+            MemoryBlock* new_block = (MemoryBlock*)malloc(sizeof(MemoryBlock));
+            new_block->start_address = worst_block->start_address;
+            new_block->size = process_size;
+            new_block->is_allocated = 1;
+            new_block->next = worst_block->next;
+
+            worst_block->size -= process_size;
+            worst_block->start_address += process_size;
+            worst_block->next = new_block;
+
+            printf("分配成功，起始地址：%d\n", new_block->start_address);
+        }
+    } else {
+        printf("无足够的内存空间可供分配\n");
+    }
+}
+
+// 分配内存
+void allocateMemory(int process_size, int algorithm) {
+    switch (algorithm) {
+        case 1:
+            firstFit(process_size);
+            break;
+        case 2:
+            bestFit(process_size);
+            break;
+        case 3:
+            worstFit(process_size);
+            break;
+        default:
+            printf("无效的算法选择\n");
+    }
+}
+
+// 释放内存
+void deallocateMemory(int process_size) {
+    MemoryBlock* current = memory;
+    MemoryBlock* prev = NULL;
+
+    while (current != NULL) {
+        if (current->is_allocated && current->size == process_size) {
+            // 找到已分配且大小匹配的内存块
+            current->is_allocated = 0;
+
+            // 合并相邻的空闲内存块
+            if (current->next != NULL && !current->next->is_allocated) {
+                current->size += current->next->size;
+                MemoryBlock* temp = current->next;
+                current->next = temp->next;
+                free(temp);
+            }
+
+            if (prev != NULL && !prev->is_allocated) {
+                prev->size += current->size;
+                prev->next = current->next;
+                free(current);
+                current = prev;
+            }
+
+            printf("释放成功，起始地址：%d\n", current->start_address);
+            return;
+        }
+        prev = current;
+        current = current->next;
+    }
+    printf("找不到要释放的内存块\n");
+}
+
+// 显示内存状态
+void printMemoryStatus() {
+    MemoryBlock* current = memory;
+    printf("\n空闲分区：\n");
+    while (current != NULL) {
+        if (!current->is_allocated) {
+            printf("起始地址：%d\t大小：%d\n", current->start_address, current->size);
+        }
+        current = current->next;
+    }
+
+    current = memory;
+    printf("\n已分配分区：\n");
+    while (current != NULL) {
+        if (current->is_allocated) {
+            printf("起始地址：%d\t大小：%d\n", current->start_address, current->size);
+        }
+        current = current->next;
+    }
 }
