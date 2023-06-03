@@ -1,6 +1,6 @@
-# 动态分区分配方式的模拟
+# 🎉动态分区分配方式的模拟
 
-## 实验目的
+## 🧑实验目的
 1. 掌握动态分区分配方式使用的数据结构和分配算法。（首次适应分配算法/最佳适应分配算法/最坏适应分配算法）
 2. 进一步加深对动态分区分配管理方式及其实现过程的理解。
 
@@ -8,397 +8,54 @@
 
 - 硬件环境：
     - 计算机一台
-    - 局域网环境
 - 软件环境：
     - Windows/Linux操作系统
     - C编译环境（Dev、VS、gcc等）
 
-## 实验内容
+## 😄实验内容
 
-1. 编写C程序，模拟实现首次/最佳/最坏适应分配算法的内存块分配与回收，要求每次分配与回收后显示出空闲分区和已分配分区的情况。
-2. 假设初始状态，内存空间为640KB
-3. 请求序列：
-    - 作业1申请130KB，作业2申请60KB，作业3申请100KB，
-    - 作业2释放60KB，作业3释放100KB，作业1释放130KB
+为了模拟实现首次/最佳/最坏适应分配算法的内存块分配与回收,首先封装了三个算法，分别是首次适应、最佳适应和最坏适应。
 
+1.首次适应算法（First Fit）：
+- 遍历内存链表，查找第一个未分配且大小足够的内存块。
+- 如果找到了匹配的内存块，根据进程大小进行分配：
+- 如果匹配的内存块大小与进程大小相等，直接将该内存块标记为已分配。
+- 如果匹配的内存块大小大于进程大小，将该内存块分割成两个部分：
+- 一个已分配的内存块，大小为进程大小。
+- 一个空闲的内存块，大小为原始内存块大小减去进程大小。
+- 如果找不到足够大小的内存块，表示无法分配。
 
-> 以下是一个简单的C程序，模拟实现首次适应（First Fit）、最佳适应（Best Fit）和最坏适应（Worst Fit）分配算法的内存块分配与回收。程序使用链表来表示内存块，并通过显示空闲分区和已分配分区的情况来展示分配与回收的过程。
+2.最佳适应算法（Best Fit）：
+- 遍历内存链表，查找所有未分配且大小足够的内存块。
+- 在所有匹配的内存块中，选择大小最接近进程大小的内存块进行分配。
+- 分配过程与首次适应算法类似。
 
-> 该程序首先调用initializeMemory函数初始化内存空间的大小，然后通过调用allocateFirstFit、allocateBestFit和allocateWorstFit函数进行内存块的分配，最后通过调用deallocate函数进行内存块的回收。每次分配和回收后，调用printMemoryStatus函数打印空闲分区和已分配分区的情况。
+3.最坏适应算法（Worst Fit）：
+- 遍历内存链表，查找所有未分配且大小足够的内存块。
+- 在所有匹配的内存块中，选择大小最大的内存块进行分配。
+- 分配过程与首次适应算法类似。
 
+对于分配和释放内存的操作，代码使用了单链表来表示内存块。每个内存块结构体包含了起始地址、大小、分配状态和指向下一个内存块的指针。初始化内存时，创建一个具有给定大小的初始内存块，并将其设置为未分配状态。分配内存时，根据所选算法在链表中找到适合的内存块进行分配。释放内存时，将分配状态标记为未分配，并根据需要合并相邻的空闲内存块。
 
-**注意：该程序仅提供了基本的内存分配和回收功能，并没有进行错误处理和边界检查。在实际使用中，可能需要对其进行进一步的改进和扩展。**
-```c
+在用户界面中，用户可以选择分配内存、释放内存、显示内存状态或退出程序。根据用户选择的算法和输入的进程大小，执行相应的操作并显示相关信息。
+当用户运行程序时，首先需要输入内存的大小。这个内存大小将作为一个初始的内存块，并被标记为未分配状态。然后，用户将进入一个循环菜单，可以选择以下操作：
 
-#include <stdio.h>
-#include <stdlib.h>
-
-// 定义内存块结构体
-typedef struct {
-    int start;    // 起始地址
-    int size;     // 大小
-    int allocated; // 是否已分配
-} MemoryBlock;
-
-// 定义链表节点结构体
-typedef struct Node {
-    MemoryBlock block;
-    struct Node* next;
-} Node;
-
-Node* head; // 链表头节点
-
-// 初始化内存空间
-void initializeMemory(int size) {
-    head = (Node*)malloc(sizeof(Node));
-    head->block.start = 0;
-    head->block.size = size;
-    head->block.allocated = 0;
-    head->next = NULL;
-}
-
-// 分配内存块（首次适应算法）
-void allocateFirstFit(int size) {
-    Node* current = head;
-    while (current != NULL) {
-        if (current->block.allocated == 0 && current->block.size >= size) {
-            current->block.allocated = 1;
-            if (current->block.size > size) {
-                Node* newBlock = (Node*)malloc(sizeof(Node));
-                newBlock->block.start = current->block.start + size;
-                newBlock->block.size = current->block.size - size;
-                newBlock->block.allocated = 0;
-                newBlock->next = current->next;
-                current->block.size = size;
-                current->next = newBlock;
-            }
-            break;
-        }
-        current = current->next;
-    }
-}
-
-// 分配内存块（最佳适应算法）
-void allocateBestFit(int size) {
-    Node* bestBlock = NULL;
-    Node* current = head;
-    while (current != NULL) {
-        if (current->block.allocated == 0 && current->block.size >= size) {
-            if (bestBlock == NULL || current->block.size < bestBlock->block.size) {
-                bestBlock = current;
-            }
-        }
-        current = current->next;
-    }
-    if (bestBlock != NULL) {
-        bestBlock->block.allocated = 1;
-        if (bestBlock->block.size > size) {
-            Node* newBlock = (Node*)malloc(sizeof(Node));
-            newBlock->block.start = bestBlock->block.start + size;
-            newBlock->block.size = bestBlock->block.size - size;
-            newBlock->block.allocated = 0;
-            newBlock->next = bestBlock->next;
-            bestBlock->block.size = size;
-            bestBlock->next = newBlock;
-        }
-    }
-}
-
-// 分配内存块（最坏适应算法）
-void allocateWorstFit(int size) {
-    Node* worstBlock = NULL;
-    Node* current = head;
-    while (current != NULL) {
-        if (current->block.allocated == 0 && current->block.size >= size) {
-            if (worstBlock == NULL || current->block.size > worstBlock->block.size) {
-                worstBlock = current;
-            }
-        }
-        current = current->next;
-    }
-    if (worstBlock != NULL) {
-        worstBlock->block.allocated = 1;
-        if (worstBlock->block.size > size) {
-            Node* newBlock = (Node*)malloc(sizeof(Node));
-            newBlock->block.start = worstBlock->block.start + size;
-            newBlock->block.size = worstBlock->block.size - size;
-            newBlock->block.allocated = 0;
-            newBlock->next = worstBlock->next;
-            worstBlock->block.size = size;
-            worstBlock->next = newBlock;
-        }
-    }
-}
-
-// 回收内存块
-void deallocate(int start) {
-    Node* current = head;
-    while (current != NULL) {
-        if (current->block.start == start && current->block.allocated == 1) {
-            current->block.allocated = 0;
-            // 合并相邻的空闲分区
-            if (current->next != NULL && current->next->block.allocated == 0) {
-                current->block.size += current->next->block.size;
-                Node* temp = current->next;
-                current->next = current->next->next;
-                free(temp);
-            }
-            if (current != head && current->block.start - current->block.size == current->block.start) {
-                Node* temp = head;
-                while (temp->next != current) {
-                    temp = temp->next;
-                }
-                temp->block.size += current->block.size;
-                temp->next = current->next;
-                free(current);
-                current = temp;
-            }
-            break;
-        }
-        current = current->next;
-    }
-}
-
-// 打印空闲分区和已分配分区的情况
-void printMemoryStatus() {
-    Node* current = head;
-    printf("Memory Status:\n");
-    while (current != NULL) {
-        printf("Block: Start=%d, Size=%d, Allocated=%s\n",
-               current->block.start, current->block.size,
-               current->block.allocated ? "Yes" : "No");
-        current = current->next;
-    }
-    printf("-----------------------\n");
-}
-
-int main() {
-    initializeMemory(100); // 初始化内存空间大小为100
-
-    // 进行内存分配与回收演示
-    allocateFirstFit(20);
-    printMemoryStatus();
-
-    allocateBestFit(10);
-    printMemoryStatus();
-
-    allocateWorstFit(30);
-    printMemoryStatus();
-
-    deallocate(0);
-    printMemoryStatus();
-
-    deallocate(30);
-    printMemoryStatus();
-
-    return 0;
-}
-
-```
+1. 分配内存：用户需要输入要分配的进程大小和分配算法（1.首次适应 2.最佳适应 3.最坏适应）。根据选择的算法，程序将在内存链表中查找可用的内存块进行分配。如果找到合适的内存块，程序将进行分配，并显示分配成功的起始地址。如果找不到足够的内存空间，则显示无足够内存空间可供分配的消息。
+2. 释放内存：用户需要输入要释放的进程大小。程序将在内存链表中查找已分配且大小匹配的内存块。如果找到匹配的内存块，程序将将其标记为未分配状态，并尝试合并相邻的空闲内存块。如果找不到要释放的内存块，则显示找不到要释放的内存块的消息。
+3. 显示内存状态：程序将遍历内存链表，并显示当前的空闲分区和已分配分区的情况。每个分区都将显示起始地址和大小。
+4. 退出：程序将结束循环，退出运行。
 
 
->以下是一个改进版的C程序，对前面的程序进行了一些改进：
-> 1. 添加了错误处理和边界检查，确保输入的内存块大小合法，并处理分配失败和回收不存在的内存块的情况。
-> 2. 添加了合并相邻空闲分区的功能，提高内存利用率。
-> 3. 修改了分配算法的实现，使其更加高效。
-
-```c
-#include <stdio.h>
-#include <stdlib.h>
-
-// 定义内存块结构体
-typedef struct {
-    int start;    // 起始地址
-    int size;     // 大小
-    int allocated; // 是否已分配
-} MemoryBlock;
-
-// 定义链表节点结构体
-typedef struct Node {
-    MemoryBlock block;
-    struct Node* next;
-} Node;
-
-Node* head; // 链表头节点
-
-// 初始化内存空间
-void initializeMemory(int size) {
-    head = (Node*)malloc(sizeof(Node));
-    head->block.start = 0;
-    head->block.size = size;
-    head->block.allocated = 0;
-    head->next = NULL;
-}
-
-// 分配内存块（首次适应算法）
-void allocateFirstFit(int size) {
-    Node* current = head;
-    Node* previous = NULL;
-    while (current != NULL) {
-        if (current->block.allocated == 0 && current->block.size >= size) {
-            // 判断当前空闲分区是否足够容纳新的分配块
-            if (current->block.size > size) {
-                // 创建新的空闲分区节点
-                Node* newBlock = (Node*)malloc(sizeof(Node));
-                newBlock->block.start = current->block.start + size;
-                newBlock->block.size = current->block.size - size;
-                newBlock->block.allocated = 0;
-                newBlock->next = current->next;
-                // 调整当前空闲分区的大小
-                current->block.size = size;
-                current->next = newBlock;
-            }
-            current->block.allocated = 1;
-            break;
-        }
-        previous = current;
-        current = current->next;
-    }
-
-    if (current == NULL) {
-        printf("Error: No available memory block to allocate.\n");
-    }
-}
-
-// 分配内存块（最佳适应算法）
-void allocateBestFit(int size) {
-    Node* bestBlock = NULL;
-    Node* previousBestBlock = NULL;
-    Node* current = head;
-    Node* previous = NULL;
-    int minSize = INT_MAX;
-
-    while (current != NULL) {
-        if (current->block.allocated == 0 && current->block.size >= size) {
-            if (current->block.size < minSize) {
-                minSize = current->block.size;
-                bestBlock = current;
-                previousBestBlock = previous;
-            }
-        }
-        previous = current;
-        current = current->next;
-    }
-
-    if (bestBlock != NULL) {
-        if (bestBlock->block.size > size) {
-            Node* newBlock = (Node*)malloc(sizeof(Node));
-            newBlock->block.start = bestBlock->block.start + size;
-            newBlock->block.size = bestBlock->block.size - size;
-            newBlock->block.allocated = 0;
-            newBlock->next = bestBlock->next;
-            bestBlock->block.size = size;
-            bestBlock->next = newBlock;
-        }
-        bestBlock->block.allocated = 1;
-    } else {
-        printf("Error: No available memory block to allocate.\n");
-    }
-}
-
-// 分配内存块（最坏适应算法）
-void allocateWorstFit(int size) {
-    Node* worstBlock = NULL;
-    Node* previousWorstBlock = NULL;
-    Node* current = head;
-    Node* previous = NULL;
-    int maxSize = INT_MIN;
-
-    while (current != NULL) {
-        if (current->block.allocated == 0 && current->block.size >= size) {
-            if (current->block.size > maxSize) {
-                maxSize = current->block.size;
-                worstBlock = current;
-                previousWorstBlock = previous;
-            }
-        }
-        previous = current;
-        current = current->next;
-    }
-
-    if (worstBlock != NULL) {
-        if (worstBlock->block.size > size) {
-            Node* newBlock = (Node*)malloc(sizeof(Node));
-            newBlock->block.start = worstBlock->block.start + size;
-            newBlock->block.size = worstBlock->block.size - size;
-            newBlock->block.allocated = 0;
-            newBlock->next = worstBlock->next;
-            worstBlock->block.size = size;
-            worstBlock->next = newBlock;
-        }
-        worstBlock->block.allocated = 1;
-    } else {
-        printf("Error: No available memory block to allocate.\n");
-    }
-}
-
-// 回收内存块
-void deallocate(int start) {
-    Node* current = head;
-    Node* previous = NULL;
-    while (current != NULL) {
-        if (current->block.start == start && current->block.allocated == 1) {
-            current->block.allocated = 0;
-
-            // 合并相邻的空闲分区（前面的分区）
-            if (previous != NULL && previous->block.allocated == 0) {
-                previous->block.size += current->block.size;
-                previous->next = current->next;
-                free(current);
-                current = previous;
-            }
-
-            // 合并相邻的空闲分区（后面的分区）
-            if (current->next != NULL && current->next->block.allocated == 0) {
-                current->block.size += current->next->block.size;
-                Node* temp = current->next;
-                current->next = current->next->next;
-                free(temp);
-            }
-            break;
-        }
-        previous = current;
-        current = current->next;
-    }
-
-    if (current == NULL) {
-        printf("Error: Memory block at address %d not found or not allocated.\n", start);
-    }
-}
-
-// 打印空闲分区和已分配分区的情况
-void printMemoryStatus() {
-    Node* current = head;
-    printf("Memory Status:\n");
-    while (current != NULL) {
-        printf("Block: Start=%d, Size=%d, Allocated=%s\n",
-               current->block.start, current->block.size,
-               current->block.allocated ? "Yes" : "No");
-        current = current->next;
-    }
-    printf("-----------------------\n");
-}
-
-int main() {
-    initializeMemory(100); // 初始化内存空间大小为100
-
-    // 进行内存分配与回收演示
-    allocateFirstFit(20);
-    printMemoryStatus();
-
-    allocateBestFit(10);
-    printMemoryStatus();
-
-    allocateWorstFit(30);
-    printMemoryStatus();
-
-    deallocate(0);
-    printMemoryStatus();
-
-    deallocate(30);
-    printMemoryStatus();
-
-    return 0;
-}
-
-```
+## 👍运行效果
+### 输入内存大小
+![输入内存大小](/images/输入内存大小.png "输入内存大小")
+### 用户选项
+![选项](/images/选项.png "用户选项")
+### 首次适应算法
+![首次适应](/images/首次适应.png "首次适应算法")
+### 最佳适应算法
+![最佳适应](/images/最佳适应.png "最佳适应算法")
+### 最坏适应算法
+![最坏适应](/images/最坏适应.png "最坏适应算法")
+### 释放内存
+![释放内存](/images/释放内存.png "释放内存")
